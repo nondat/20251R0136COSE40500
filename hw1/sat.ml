@@ -262,20 +262,59 @@ let rec bcp : cnf -> cnf =
 ;;
 
 (* Problem 4: pure literal elimination *)
-let (* rec *) ple : cnf -> cnf 
-=fun _ -> raise Not_implemented (* TODO*)
 
-let choose : cnf -> var 
-=fun a -> snd (List.hd (List.hd a))
+let rec remove_not_pure : (bool * var) list -> (bool * var) list =
+  fun l ->
+  match l with
+  | (b1, v1) :: (b2, v2) :: tl ->
+    if v1 = v2 then remove_not_pure tl else (b1, v1) :: remove_not_pure ((b2, v2) :: tl)
+  | [ x ] -> [ x ]
+  | _ -> []
+;;
 
-let rec dpll : cnf -> bool 
-=fun a ->  
-  let a = ple (bcp a) in 
-    if a = [] then true  (* /\ [] = true *)
-    else if List.mem [] a then false (* \/ [] = false *)
-    else 
-      let x = choose a in 
-        dpll (subst a false x) || dpll (subst a true x) 
+let rec ple : cnf -> cnf =
+  fun cnf ->
+  let s = Bool_VarSet.of_list [] in
+  let new_s =
+    List.fold_left
+      (fun acc clau ->
+        List.fold_left
+          (fun acc_inner (b, v) ->
+            if Bool_VarSet.mem (b, v) acc_inner
+            then acc_inner
+            else Bool_VarSet.add (b, v) acc_inner)
+          acc
+          clau)
+      s
+      cnf
+  in
+  let l = Bool_VarSet.to_list new_s in
+  let new_l = remove_not_pure l in
+  if List.is_empty new_l
+  then cnf
+  else (
+    let rec _ple : cnf -> (bool * var) list -> cnf =
+      fun _cnf _l ->
+      match _l with
+      | (b, v) :: tl ->
+        if b then _ple (subst _cnf true v) tl else _ple (subst _cnf false v) tl
+      | _ -> _cnf
+    in
+    ple (_ple cnf new_l))
+;;
 
-let solve : formula -> bool 
-=fun f -> dpll (convert f)
+let choose : cnf -> var = fun a -> snd (List.hd (List.hd a))
+
+let rec dpll : cnf -> bool =
+  fun a ->
+  let a = ple (bcp a) in
+  if a = []
+  then true (* /\ [] = true *)
+  else if List.mem [] a
+  then false (* \/ [] = false *)
+  else (
+    let x = choose a in
+    dpll (subst a false x) || dpll (subst a true x))
+;;
+
+let solve : formula -> bool = fun f -> dpll (convert f)
