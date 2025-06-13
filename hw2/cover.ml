@@ -81,5 +81,18 @@ let model2lst : Model.t -> Fmla.t list -> int option list =
     (range (List.length s))
 ;;
 
-let cover : sets -> int list  
-=fun (n, m, t) -> ignore (n, m, t); [] (* TODO *)
+let cover : sets -> int list =
+  fun (n, m, t) ->
+  let f = encode (n, m, t) in
+  let s =
+    List.map
+      (fun i ->
+        Expr.create_var (Expr.sort_of_bool ()) ~name:("S" ^ string_of_int (i + 1)))
+      (range n)
+  in
+  let _f = trans f s t in
+  let _, model_opt = Solver.check_satisfiability [ _f ] in
+  match model_opt with
+  | Some model -> List.filter_map (fun i -> i) (model2lst model s)
+  | None -> []
+;;
