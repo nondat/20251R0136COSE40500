@@ -250,8 +250,16 @@ let subst : cnf -> bool -> var -> cnf =
 ;;
 
 (* Problem 3: boolean constraint propagation *)
-let (* rec *) bcp : cnf -> cnf
-=fun _ -> raise Not_implemented (* TODO *)
+let rec bcp : cnf -> cnf =
+  fun c ->
+  let tmp_lst = List.filter (fun x -> List.length x = 1) c in
+  if List.is_empty tmp_lst
+  then c
+  else (
+    let b, v = List.hd (List.hd tmp_lst) in
+    let removed = subst c b v in
+    if c = removed then c else bcp removed)
+;;
 
 (* Problem 4: pure literal elimination *)
 let (* rec *) ple : cnf -> cnf 
