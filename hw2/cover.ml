@@ -57,5 +57,29 @@ let encode : sets -> formula =
   And [ f1; f2 ]
 ;;
 
+let rec trans : formula -> Fmla.t list -> int list list -> Fmla.t =
+  fun f s t ->
+  match f with
+  | X i -> List.nth s (i - 1)
+  | T (row, col) -> Expr.of_bool (List.nth (List.nth t (row - 1)) (col - 1) = 1)
+  | Bool b -> Expr.of_bool b
+  | And fl -> Fmla.create_and (List.map (fun x -> trans x s t) fl)
+  | Or fl -> Fmla.create_or (List.map (fun x -> trans x s t) fl)
+  | Not _f -> Fmla.create_not (trans _f s t)
+  | Imply (f1, f2) -> Fmla.create_imply (trans f1 s t) (trans f2 s t)
+  | Iff (f1, f2) -> Fmla.create_iff (trans f1 s t) (trans f2 s t)
+  | Neq (i1, i2) -> Expr.create_neq (Expr.of_int i1) (Expr.of_int i2)
+;;
+
+let model2lst : Model.t -> Fmla.t list -> int option list =
+  fun model s ->
+  List.map
+    (fun i ->
+      match Model.eval (List.nth s i) ~model with
+      | Some expr -> if expr = Expr.true_ () then Some (i + 1) else None
+      | None -> raise (Failure "model2sol"))
+    (range (List.length s))
+;;
+
 let cover : sets -> int list  
 =fun (n, m, t) -> ignore (n, m, t); [] (* TODO *)
