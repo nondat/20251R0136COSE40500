@@ -241,8 +241,13 @@ let convert : formula -> cnf =
 ;;
 
 (* Problem 2: substitution a[v/x] (replacing x by v in a) *)
-let subst : cnf -> bool -> var -> cnf 
-=fun a v x -> ignore (a,v,x); raise Not_implemented  (* TODO *)
+let subst : cnf -> bool -> var -> cnf =
+  fun a v x ->
+  let _new =
+    List.map (fun clau -> List.filter (fun (b, _v) -> not (b <> v && _v = x)) clau) a
+  in
+  List.filter (fun clau -> not (List.mem (v, x) clau)) _new
+;;
 
 (* Problem 3: boolean constraint propagation *)
 let (* rec *) bcp : cnf -> cnf
